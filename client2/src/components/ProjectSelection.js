@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
+export const backendServerUrl = "http://localhost:5000"
+
 const ProjectSelection = () => {
   const [projects, setProjects] = useState([]); // Stores user projects
   const [newProjectName, setNewProjectName] = useState(""); // Input for new project
@@ -10,7 +12,7 @@ const ProjectSelection = () => {
   // Function to fetch user's project list
   const fetchProjects = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/get_user_projects_list", {
+      const response = await axios.get(backendServerUrl + "/get_user_projects_list", {
         params: { userId },
       });
       setProjects(response.data.projects);
@@ -22,7 +24,7 @@ const ProjectSelection = () => {
   // Function to join a project
   const joinProject = async (projectId) => {
     try {
-      await axios.post("http://localhost:5000/join_project", { userId, projectId });
+      await axios.post(backendServerUrl + "/join_project", { userId, projectId });
       alert("Joined project successfully!");
       fetchProjects(); // Refresh project list
     } catch (error) {
@@ -33,7 +35,7 @@ const ProjectSelection = () => {
   // Function to create a new project
   const createProject = async () => {
     try {
-      await axios.post("http://localhost:5000/create_project", {
+      await axios.post(backendServerUrl + "/create_project", {
         name: newProjectName,
         description: newProjectDesc,
       });

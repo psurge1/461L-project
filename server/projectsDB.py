@@ -9,17 +9,20 @@ Project = {
     'projectId': projectId,
     'description': description,
     'hwSets': {HW1: 0, HW2: 10, ...},
-    'users': [user1, user2, ...]
+    'users': [userId1, userId2, ...]
 }
 '''
 
-def queryProject(client, projectId):
-    db = client['projectDB']
-    project = db.projects.find_one({'projectId': projectId})
-    return project
+def __get_database(client):
+    return client["projectDB"]
 
-def createProject(client, projectName, projectId, description):
-    db = client['projectDB']
+def queryProject(client, projectId) -> dict[str, any]:
+    db = __get_database(client)
+    project = db.projects.find_one({'projectId': projectId})
+    return {"status": "success", "projectName": project["projectName"], "projectId": project["projectId"], "description": project["description"], "log": ""}
+
+def createProject(client, projectName, projectId, description) -> dict[str, any]:
+    db = __get_database(client)
     project = {
         'projectName': projectName,
         'projectId': projectId,
@@ -28,57 +31,59 @@ def createProject(client, projectName, projectId, description):
         'users': []
     }
     db.projects.insert_one(project)
-    return "Project created successfully."
+    return {"status": "success", "log": "Project created successfully."}
 
-def addUser(client, projectId, userId):
-    db = client['projectDB']
+### TODO: Needs to add project to user's list of projects
+def addUser(client, projectId, userId) -> dict[str, any]:
+    db = __get_database(client)
     db.projects.update_one({'projectId': projectId}, {'$addToSet': {'users': userId}})
-    return "User added successfully."
+    return {"status": "success", "log": "User added successfully."}
 
-def updateUsage(client, projectId, hwSetName):
-    db = client['projectDB']
+
+def updateUsage(client, projectId, hwSetName) -> dict[str, any]:
+    db = __get_database(client)
     project = db.projects.find_one({'projectId': projectId})
     if project and hwSetName in project['hwSets']:
-        return project['hwSets'][hwSetName]
-    return "Hardware set not found in project."
+        return {"status": "success", "log": project['hwSets'][hwSetName]}
+    return {"status": "success", "log": "Hardware set not found in project."}
 
-def checkOutHW(client, projectId, hwSetName, qty, userId):
-    db = client['projectDB']
+def checkOutHW(client, projectId, hwSetName, qty, userId) -> dict[str, any]:
+    db = __get_database(client)
     project = db.projects.find_one({'projectId': projectId})
     
     if not project:
-        return "Project not found."
+        return {"status": "error", "log": "Project not found."}
     
     if userId not in project['users']:
-        return "User not part of project."
+        return {"status": "error", "log": "User not part of project."}
     
     available_qty = hardwareDB.getAvailableQty(hwSetName)
     if available_qty < qty:
-        return "Not enough hardware available."
+        return {"status": "error", "log": "Not enough hardware available."}
     
     hardwareDB.updateQty(hwSetName, -qty)
     db.projects.update_one(
         {'projectId': projectId},
         {'$inc': {f'hwSets.{hwSetName}': qty}}
     )
-    return "Hardware checked out successfully."
+    return {"status": "success", "log": "Hardware checked out successfully."}
 
-def checkInHW(client, projectId, hwSetName, qty, userId):
-    db = client['projectDB']
+def checkInHW(client, projectId, hwSetName, qty, userId) -> dict[str, any]:
+    db = __get_database(client)
     project = db.projects.find_one({'projectId': projectId})
     
     if not project:
-        return "Project not found."
+        return {"status": "error", "log": "Project not found."}
     
     if userId not in project['users']:
-        return "User not part of project."
+        return {"status": "error", "log": "User not part of project."}
     
     if hwSetName not in project['hwSets'] or project['hwSets'][hwSetName] < qty:
-        return "Invalid hardware return quantity."
+        return {"status": "error", "log": "Invalid hardware return quantity."}
     
     hardwareDB.updateQty(hwSetName, qty)
     db.projects.update_one(
         {'projectId': projectId},
         {'$inc': {f'hwSets.{hwSetName}': -qty}}
     )
-    return "Hardware checked in successfully."
+    return {"status": "success", "log": "Hardware checked in successfully."}

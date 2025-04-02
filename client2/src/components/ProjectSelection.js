@@ -46,6 +46,15 @@ const ProjectSelection = () => {
     }
   };
 
+  //TODO log out function
+  //check inside functions of this
+  const logOut = async () => {
+    setUserId(""); // Clear user ID to log the user out
+    setProjects([]); // Optionally clear projects as well
+    alert("Logged out successfully!");
+  };
+  
+
   return (
     <div style={{ padding: "20px" }}>
       <h2>Project Selection</h2>
@@ -92,6 +101,11 @@ const ProjectSelection = () => {
         placeholder="Project Description"
       />
       <button onClick={createProject}>Create Project</button>
+
+      {/* Log Out Button */}
+      <div style={{ marginTop: "20px" }}>
+        <button onClick={logOut}>Log Out</button>
+      </div>
     </div>
   );
 };

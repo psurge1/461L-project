@@ -102,13 +102,13 @@ def checkOutHW(client, projectId, hwSetName, qty, userId):
         return {"status": "error", "log": "User not in project."}
 
     result = hardwareDB.requestSpace(client, hwSetName, qty)
-    if result["status"] != "success":
-        return result
 
-    return updateUsage(client, projectId, hwSetName, qty)
+    checked_out = result["checked_out"]
+
+    return updateUsage(client, projectId, hwSetName, checked_out)
 
 
-def checkOutHW(client, projectId, hwSetName, qty, userId):
+def checkInHW(client, projectId, hwSetName, qty, userId):
     project = queryProject(client, projectId)
     if not project:
         return {"status": "error", "log": "Project not found."}
@@ -116,8 +116,23 @@ def checkOutHW(client, projectId, hwSetName, qty, userId):
     if userId not in project['users']:
         return {"status": "error", "log": "User not in project."}
 
-    result = hardwareDB.requestSpace(client, hwSetName, qty)
-    if result["status"] != "success":
-        return result
+    current_qty = project['hardware'].get(hwSetName, 0)
 
-    return updateUsage(client, projectId, hwSetName, qty)
+    if qty > current_qty:
+        return {
+            "status": "error",
+            "log": f"Cannot check in {qty} units of {hwSetName}. Only {current_qty} currently checked out."
+        }
+
+    hw_set = hardwareDB.queryHardwareSet(client, hwSetName)
+    if not hw_set:
+        return {"status": "error", "log": f"Hardware set {hwSetName} not found."}
+
+    new_availability = hw_set['availability'] + qty
+    result = hardwareDB.updateAvailability(client, hwSetName, new_availability)
+
+    if result != 1:
+        return {"status": "error", "log": "Failed to update hardware availability."}
+
+    return updateUsage(client, projectId, hwSetName, -qty)
+

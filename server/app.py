@@ -85,7 +85,7 @@ def add_user():
     userId = data.get('userId')
     password = data.get('password')
 
-    print(data)
+    # print(data)
 
     if not userId or not password:
         return jsonify({'status': 'error', 'message': 'Username and password are required.'}), 400
@@ -128,13 +128,15 @@ def create_project():
     projectId = data.get('projectId')
     description = data.get('description')
 
+    ## creating a project even if the user doesn't exist
     rOne = projectsDB.createProject(client, projectName, projectId, description)
+    if rOne["status"] == "error":
+        return jsonify(rOne), 400
     rTwo = projectsDB.addUser(client, projectId, userId)
+    if rTwo["status"] == "error":
+        return jsonify(rTwo), 400
 
-    return jsonify({
-        "createProject": rOne,
-        "addUserToProject": rTwo
-    })
+    return jsonify({"status": "success", "log": "project created", "projectId": projectId})
 
 # Route for getting project information
 # Tested with postman
@@ -144,7 +146,10 @@ def get_project_info():
     projectid = data.get('projectId')
     result = projectsDB.queryProject(client, projectid)
 
-    return jsonify(result)
+    if result and '_id' in result:
+        result['_id'] = str(result['_id'])
+
+    return jsonify({"status": "success", "result": result})
 
 # Route for getting all hardware names
 @app.route('/get_all_hw_names', methods=['GET'])

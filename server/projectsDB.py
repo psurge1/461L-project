@@ -11,6 +11,9 @@ def queryProject(client, projectId):
     return projectCollection.find_one({'projectId': projectId})
 
 def createProject(client, projectName, projectId, description):
+    if projectId == "" or projectName == "":
+        return {"status": "error", "log": "empty projectId or projectName"}
+    
     database = client[dbs.PROJECTSDB.value]
     projectCollection = database['projects']
 
@@ -35,6 +38,9 @@ def createProject(client, projectName, projectId, description):
     return {"status": "success", "log": "project created"}
 
 def addUser(client, projectId, userId):
+    if projectId == "" or userId == "":
+        return {"status": "error", "log": "empty projectId or userId"}
+    
     projectsDatabase = client[dbs.PROJECTSDB.value]
     projectCollection = projectsDatabase['projects']
     usersDatabase = client[dbs.USERSDB.value]
@@ -44,9 +50,9 @@ def addUser(client, projectId, userId):
 
     if not users:
         return {"status": "error", "log": "wrong user"}
-    print(projectId, userId)
+    # print(projectId, userId)
     project = queryProject(client, projectId)
-    print(project)
+    # print(project)
 
     if not project:
         return {"status": "error", "log": "project not found"}

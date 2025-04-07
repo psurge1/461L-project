@@ -72,7 +72,7 @@ def join_project():
     projectId = data["projectId"]
     userId = data["userId"]
     
-    result = projectsDB.addUser(client, projectId, userId)
+    result = usersDB.addUser(client, projectId, userId)
 
     return jsonify(result)
 
@@ -85,7 +85,7 @@ def add_user():
     userId = data.get('userId')
     password = data.get('password')
 
-    # print(data)
+    print(data)
 
     if not userId or not password:
         return jsonify({'status': 'error', 'message': 'Username and password are required.'}), 400
@@ -128,15 +128,13 @@ def create_project():
     projectId = data.get('projectId')
     description = data.get('description')
 
-    ## creating a project even if the user doesn't exist
     rOne = projectsDB.createProject(client, projectName, projectId, description)
-    if rOne["status"] == "error":
-        return jsonify(rOne), 400
     rTwo = projectsDB.addUser(client, projectId, userId)
-    if rTwo["status"] == "error":
-        return jsonify(rTwo), 400
 
-    return jsonify({"status": "success", "log": "project created", "projectId": projectId})
+    return jsonify({
+        "createProject": rOne,
+        "addUserToProject": rTwo
+    })
 
 # Route for getting project information
 # Tested with postman
@@ -146,10 +144,7 @@ def get_project_info():
     projectid = data.get('projectId')
     result = projectsDB.queryProject(client, projectid)
 
-    if result and '_id' in result:
-        result['_id'] = str(result['_id'])
-
-    return jsonify({"status": "success", "result": result})
+    return jsonify(result)
 
 # Route for getting all hardware names
 @app.route('/get_all_hw_names', methods=['GET'])
@@ -167,28 +162,24 @@ def get_hw_info():
     # return jsonify({})
 
 # Route for checking out hardware
-@app.route('/check_out', methods=['PUT'])
-def check_out():
-    data = request.args
-    hwSetName = data["hwSetName"]
-    amount = data["amount"]
-    projectId = data["projectId"]
-    userId = data["userId"]
+@app.route('/check_out', methods=['POST'])
+def checkout():
+    data = request.get_json()
+    hwSetName = data["setNumber"]
+    amount = int(data["amount"])  # ✅ Force conversion to integer
 
-    projCheckinResult = projectsDB.checkInHW(client, projectId, hwSetName, amount, userId)
-    return jsonify(projCheckinResult)
+    result = hardwareDB.requestSpace(client, hwSetName, amount)
+    return jsonify(result)
 
-# Route for checking in hardware
-@app.route('/check_in', methods=['PUT'])
-def check_in():
-    data = request.args
-    hwSetName = data["hwSetName"]
-    amount = data["amount"]
-    projectId = data["projectId"]
-    userId = data["userId"]
+@app.route('/check_in', methods=['POST'])
+def checkin():
+    data = request.get_json()
+    hwSetName = data["setNumber"]
+    amount = int(data["amount"])  # ✅ Force conversion to integer
 
-    projCheckoutResult = projectsDB.checkOutHW(client, projectId, hwSetName, amount, userId)
-    return jsonify(projCheckoutResult)
+    result = hardwareDB.incAvailability(client, hwSetName, amount)
+    return jsonify(result)
+
 
 # Route for creating a new hardware set
 # Tested with postman

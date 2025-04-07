@@ -55,8 +55,9 @@ const ProjectSelection = () => {
       alert("User not logged in.");
       return;
     }
+  
     try {
-      await axios.post(backendServerUrl + "/create_project", null, {
+      const response = await axios.post(backendServerUrl + "/create_project", null, {
         params: {
           userId,
           projectId: newProjectId,
@@ -67,10 +68,15 @@ const ProjectSelection = () => {
       alert("Project created successfully!");
       fetchAllProjects();
     } catch (error) {
-      alert("Failed to create project.");
+      if (error.response && error.response.data?.log === "project already exists") {
+        alert(`Project ID "${newProjectId}" already exists. Please choose a different one.`);
+      } else {
+        alert("Failed to create project.");
+      }
+      console.error("Error creating project:", error);
     }
   };
-
+  
   const logOut = () => {
     localStorage.removeItem("userId");
     setAllProjects([]);

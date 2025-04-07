@@ -10,6 +10,9 @@ const ResourceManagement = () => {
   const [message, setMessage] = useState("");
   const [newSetName, setNewSetName] = useState("");
   const [newSetCapacity, setNewSetCapacity] = useState("");
+  const [projectId, setProjectId] = useState("");
+
+  const userId = localStorage.getItem("userId");
 
   useEffect(() => {
     const fetchAllHardware = async () => {
@@ -48,32 +51,50 @@ const ResourceManagement = () => {
   };
 
   const handleCheckout = async (setName) => {
+    if (!projectId || !userId) {
+      alert("Please enter a project ID.");
+      return;
+    }
     try {
       await axios.post(
         `${backendServerUrl}/check_out`,
-        { setNumber: setName, amount: Number(amounts[setName] || 0) },
+        {
+          setNumber: setName,
+          amount: Number(amounts[setName] || 0),
+          projectId,
+          userId,
+        },
         { headers: { "Content-Type": "application/json" } }
       );
       setMessage(`Checked out ${amounts[setName]} from ${setName}`);
       window.location.reload();
     } catch (error) {
       console.error("Checkout failed:", error);
-      setMessage("Checkout failed!");
+      setMessage(error.response?.data?.log || "Checkout failed!");
     }
   };
 
   const handleCheckin = async (setName) => {
+    if (!projectId || !userId) {
+      alert("Please enter a project ID.");
+      return;
+    }
     try {
       await axios.post(
         `${backendServerUrl}/check_in`,
-        { setNumber: setName, amount: Number(amounts[setName] || 0) },
+        {
+          setNumber: setName,
+          amount: Number(amounts[setName] || 0),
+          projectId,
+          userId,
+        },
         { headers: { "Content-Type": "application/json" } }
       );
       setMessage(`Checked in ${amounts[setName]} to ${setName}`);
       window.location.reload();
     } catch (error) {
       console.error("Check-in failed:", error);
-      setMessage("Check-in failed!");
+      setMessage(error.response?.data?.log || "Check-in failed!");
     }
   };
 
@@ -109,7 +130,22 @@ const ResourceManagement = () => {
   return (
     <div style={{ maxWidth: "800px", margin: "40px auto", padding: "20px", fontFamily: "Arial, sans-serif" }}>
       <h2 style={{ textAlign: "center", marginBottom: "30px" }}>🔧 Resource Management</h2>
+
       {message && <p style={{ color: "green", textAlign: "center" }}>{message}</p>}
+
+      <div style={{ marginBottom: "20px", textAlign: "center" }}>
+        <label>
+          <strong>Project ID: </strong>
+          <input
+            type="text"
+            placeholder="Enter project ID"
+            value={projectId}
+            onChange={(e) => setProjectId(e.target.value)}
+            style={{ padding: "8px", marginLeft: "10px", width: "200px" }}
+          />
+        </label>
+      </div>
+
       {loading ? (
         <p style={{ textAlign: "center" }}>Loading hardware sets...</p>
       ) : (

@@ -166,24 +166,44 @@ def get_hw_info():
     return jsonify(hardwareDB.queryHardwareSet(client, hw_set_name))
     # return jsonify({})
 
-# Route for checking out hardware
 @app.route('/check_out', methods=['POST'])
 def checkout():
     data = request.get_json()
     hwSetName = data["setNumber"]
-    amount = int(data["amount"])  # ✅ Force conversion to integer
+    amount = int(data["amount"])
+    projectId = data["projectId"]
+    userId = data["userId"]
 
+    # Step 1: Reserve hardware
     result = hardwareDB.requestSpace(client, hwSetName, amount)
-    return jsonify(result)
+    if result["status"] != "success":
+        return jsonify(result), 400
+
+    # Step 2: Update project usage
+    usage_result = projectsDB.updateUsage(client, projectId, hwSetName, amount, userId)
+    if usage_result["status"] != "success":
+        return jsonify(usage_result), 400
+
+    return jsonify(usage_result)
+
 
 @app.route('/check_in', methods=['POST'])
 def checkin():
     data = request.get_json()
     hwSetName = data["setNumber"]
-    amount = int(data["amount"])  # ✅ Force conversion to integer
+    amount = int(data["amount"])
+    projectId = data["projectId"]
+    userId = data["userId"]
 
-    result = hardwareDB.incAvailability(client, hwSetName, amount)
-    return jsonify(result)
+    # Validate against project usage
+    result = projectsDB.updateUsage(client, projectId, hwSetName, -amount, userId)
+    if result["status"] != "success":
+        return jsonify(result), 400
+
+    # Update availability only after user-level validation passes
+    result2 = hardwareDB.incAvailability(client, hwSetName, amount)
+    return jsonify(result2)
+
 
 
 # Route for creating a new hardware set

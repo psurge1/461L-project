@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pymongo import MongoClient
 import certifi
+from dbs import dbs
 
 
 
@@ -137,6 +138,18 @@ def get_project_info():
         result['_id'] = str(result['_id'])
 
     return jsonify({"status": "success", "result": result})
+
+@app.route('/get_all_projects', methods=['GET'])
+def get_all_projects():
+    projectsCollection = client[dbs.PROJECTSDB.value]['projects']
+    all_projects = list(projectsCollection.find({}))
+
+    for project in all_projects:
+        project['_id'] = str(project['_id'])
+
+    return jsonify({"projects": all_projects})
+
+
 
 # Route for getting all hardware names
 @app.route('/get_all_hw_names', methods=['GET'])

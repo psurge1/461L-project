@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import ProjectSelection from "./components/ProjectSelection"; // Import ProjectSelection
+import ResourceManagement from "./components/ResourceManagement"; // Import ResourceManagement
 import backendServerUrl from "./components/ProjectSelection"; // Import ProjectSelection
-import axios from "axios"
+import axios from "axios";
+
 
 function App() {
   const [isLogin, setIsLogin] = useState(true);
@@ -53,7 +55,7 @@ function App() {
     <Router>
       <div style={{ textAlign: "center", marginTop: "50px" }}>
         <nav>
-          <Link to="/">Home</Link> | <Link to="/projects">Project Selection</Link>
+          <Link to="/">Home</Link> | <Link to="/projects">Project Selection</Link> | <Link to="/resources">Resource Management</Link>
         </nav>
 
         <Routes>
@@ -91,6 +93,9 @@ function App() {
 
           {/* Separate Project Selection Route */}
           <Route path="/projects" element={<ProjectSelection />} />
+          
+          {/* Separate Resource Management Route */}
+          <Route path="/resources" element={<ResourceManagement />} />
         </Routes>
       </div>
     </Router>

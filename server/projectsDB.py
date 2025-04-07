@@ -2,92 +2,108 @@ from pymongo import MongoClient
 
 import hardwareDB
 
-'''
-Structure of Project entry:
-Project = {
-    'projectName': projectName,
-    'projectId': projectId,
-    'description': description,
-    'hwSets': {HW1: 0, HW2: 10, ...},
-    'users': [userId1, userId2, ...]
-}
-'''
 
-def __get_database(client):
-    return client["projectDB"]
+def __getDatabase(client):
+    return client["projectsDB"]
 
-def queryProject(client, projectId) -> dict[str, any]:
-    db = __get_database(client)
-    project = db.projects.find_one({'projectId': projectId})
-    return {"status": "success", "projectName": project["projectName"], "projectId": project["projectId"], "description": project["description"], "log": ""}
 
-def createProject(client, projectName, projectId, description) -> dict[str, any]:
-    db = __get_database(client)
-    project = {
-        'projectName': projectName,
+def queryProject(client, projectId):
+    database = __getDatabase(client)
+    projectCollection = database['projects']
+    return projectCollection.find_one({'projectId': projectId})
+
+def createProject(client, projectName, projectId, description):
+    database = __getDatabase(client)
+    projectCollection = database['projects']
+
+    if projectCollection.find_one({'projectId': projectId}):
+        return {"status": "error", "log": "project already exists"}
+    
+    hw_query = hardwareDB.getAllHwNames(client)
+    if hw_query["status"] != "success":
+        return {"status": "error", "log": "Failed to retrieve hardware sets."}
+    
+    hardware_usage = {hwName: 0 for hwName in hw_query["hwnames"]}
+
+    newProject = {
         'projectId': projectId,
+        'projectName': projectName,
         'description': description,
-        'hwSets': {},
-        'users': []
+        'users': [],
+        'hardware': hardware_usage,
     }
-    db.projects.insert_one(project)
-    return {"status": "success", "log": "Project created successfully."}
 
-### TODO: Needs to add project to user's list of projects
-def addUser(client, projectId, userId) -> dict[str, any]:
-    db = __get_database(client)
-    db.projects.update_one({'projectId': projectId}, {'$addToSet': {'users': userId}})
-    return {"status": "success", "log": "User added successfully."}
+    projectCollection.insert_one(newProject)
+    return {"status": "success", "log": "project created"}
 
+def addUser(client, projectId, userId):
+    database = __getDatabase(client)
+    projectCollection = database['projects']
 
-def updateUsage(client, projectId, hwSetName) -> dict[str, any]:
-    db = __get_database(client)
-    project = db.projects.find_one({'projectId': projectId})
-    if project and hwSetName in project['hwSets']:
-        return {"status": "success", "log": project['hwSets'][hwSetName]}
-    return {"status": "success", "log": "Hardware set not found in project."}
+    project = queryProject(client, projectId)
 
-def checkOutHW(client, projectId, hwSetName, qty, userId) -> dict[str, any]:
-    db = __get_database(client)
-    project = db.projects.find_one({'projectId': projectId})
-    
     if not project:
-        return {"status": "error", "log": "Project not found."}
+        return {"status": "error", "log": "project not found"}
     
-    if userId not in project['users']:
-        return {"status": "error", "log": "User not part of project."}
-    
-    # available_qty = hardwareDB.getAvailableQty(hwSetName)
-    # if available_qty < qty:
-    #     return {"status": "error", "log": "Not enough hardware available."}
-    result = hardwareDB.requestSpace(client, hwSetName, qty)
-    
-    # hardwareDB.updateQty(hwSetName, -qty)
-    if result["status"] == "success":
-        db.projects.update_one(
-            {'projectId': projectId},
-            {'$inc': {f'hwSets.{hwSetName}': qty}}
-        )
-        return {"status": "success", "log": "Hardware checked out successfully."}
-    else:
-        return {"status": "error", "log": "Hardware not checked out."}
+    if userId in project['users']:
+        return {"status": "error", "log": "user already in project"}
 
-def checkInHW(client, projectId, hwSetName, qty, userId) -> dict[str, any]:
-    db = __get_database(client)
-    project = db.projects.find_one({'projectId': projectId})
-    
-    if not project:
-        return {"status": "error", "log": "Project not found."}
-    
-    if userId not in project['users']:
-        return {"status": "error", "log": "User not part of project."}
-    
-    if hwSetName not in project['hwSets'] or project['hwSets'][hwSetName] < qty:
-        return {"status": "error", "log": "Invalid hardware return quantity."}
-    
-    hardwareDB.updateQty(hwSetName, qty)
-    db.projects.update_one(
+    projectCollection.update_one(
         {'projectId': projectId},
-        {'$inc': {f'hwSets.{hwSetName}': -qty}}
+        {'$push': {'users': userId}}
     )
-    return {"status": "success", "log": "Hardware checked in successfully."}
+    return {"status": "success", "log": "user added to project"}
+
+def updateUsage(client, projectId, hwSetName, qty):
+    database = __getDatabase(client)
+    projectCollection = database['projects']
+    project = queryProject(client, projectId)
+
+    if not project:
+        return {"status": "error", "log": "project not found"}
+
+    current = project['hardware'].get(hwSetName, 0)
+    new_val = current + qty
+
+    projectCollection.update_one(
+        {'projectId': projectId},
+        {'$set': {f'hardware.{hwSetName}': new_val}}
+    )
+
+    action = "checked out" if qty > 0 else "checked in"
+    log_message = f"{action} {abs(qty)} units of {hwSetName}"
+    
+    return {
+        "status": "success",
+        "log": log_message,
+        "newUsage": new_val
+    }
+
+def checkOutHW(client, projectId, hwSetName, qty, userId):
+    project = queryProject(client, projectId)
+    if not project:
+        return {"status": "error", "log": "Project not found."}
+
+    if userId not in project['users']:
+        return {"status": "error", "log": "User not in project."}
+
+    result = hardwareDB.requestSpace(client, hwSetName, qty)
+    if result["status"] != "success":
+        return result
+
+    return updateUsage(client, projectId, hwSetName, qty)
+
+
+def checkOutHW(client, projectId, hwSetName, qty, userId):
+    project = queryProject(client, projectId)
+    if not project:
+        return {"status": "error", "log": "Project not found."}
+
+    if userId not in project['users']:
+        return {"status": "error", "log": "User not in project."}
+
+    result = hardwareDB.requestSpace(client, hwSetName, qty)
+    if result["status"] != "success":
+        return result
+
+    return updateUsage(client, projectId, hwSetName, qty)

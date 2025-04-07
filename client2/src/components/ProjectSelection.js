@@ -56,35 +56,8 @@ const ProjectSelection = () => {
   
 
   return (
-    <div style={{ padding: "20px" }}>
+<div style={{ padding: "20px" }}>
       <h2>Project Selection</h2>
-
-      {/* User ID Input */}
-      <div>
-        <label>User ID:</label>
-        <input
-          type="text"
-          value={userId}
-          onChange={(e) => setUserId(e.target.value)}
-          placeholder="Enter your user ID"
-        />
-        <button onClick={fetchProjects}>Load My Projects</button>
-      </div>
-
-      {/* Join an Existing Project */}
-      <h3>Your Projects</h3>
-      {projects.length === 0 ? (
-        <p>No projects found. Join or create one!</p>
-      ) : (
-        <ul>
-          {projects.map((project) => (
-            <li key={project.id}>
-              {project.name} - {project.description}
-              <button onClick={() => joinProject(project.id)}>Join</button>
-            </li>
-          ))}
-        </ul>
-      )}
 
       {/* Create a New Project */}
       <h3>Create a New Project</h3>
@@ -102,6 +75,36 @@ const ProjectSelection = () => {
       />
       <button onClick={createProject}>Create Project</button>
 
+
+    
+      {/* Join an Existing Project */}
+      {/* Project ID Input */}
+      <h3>Your Projects</h3>
+      <div>
+        <label>Project ID:</label>
+          <input
+            type="text"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+          placeholder="Enter your project ID"
+          />
+        <button onClick={fetchProjects}>Load My Projects</button>
+      </div>
+
+    
+      {projects.length === 0 ? (
+        <p>No projects found. Join or create one!</p>
+      ) : (
+        <ul>
+          {projects.map((project) => (
+            <li key={project.id}>
+              {project.name} - {project.description}
+              <button onClick={() => joinProject(project.id)}>Join</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      
       {/* Log Out Button */}
       <div style={{ marginTop: "20px" }}>
         <button onClick={logOut}>Log Out</button>

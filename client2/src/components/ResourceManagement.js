@@ -48,6 +48,11 @@ const ResourceManagement = () => {
         setMessage("Check-in failed!");
       }
     };
+
+    const logOut = () => {
+      alert("Logged out successfully!");
+      window.location.reload(); // Or redirect to login page if needed
+    };
   
     return (
       <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -59,7 +64,8 @@ const ResourceManagement = () => {
           <div>
             <div>
               <h3>HW Set 1</h3>
-              <p>Available: {resources.hwSet1?.available || 0} / {resources.hwSet1?.capacity || 200}</p>
+              <p>Available: {resources.hwSet1?.available || 0}</p>
+              <p>Capacity: {resources.hwSet1?.capacity || 200}</p>
               <input
                 type="number"
                 value={hwSet1Amount}
@@ -72,8 +78,8 @@ const ResourceManagement = () => {
   
             <div style={{ marginTop: "20px" }}>
               <h3>HW Set 2</h3>
-              <p>Available: {resources.hwSet2?.available || 0} / {resources.hwSet2?.capacity || 200}</p>
-              <input
+              <p>Available: {resources.hwSet2?.available || 0}</p>
+              <p>Capacity: {resources.hwSet2?.capacity || 200}</p>              <input
                 type="number"
                 value={hwSet2Amount}
                 onChange={(e) => setHwSet2Amount(e.target.value)}
@@ -82,9 +88,16 @@ const ResourceManagement = () => {
               <button onClick={() => handleCheckout("hwSet2", hwSet2Amount)}>Check Out</button>
               <button onClick={() => handleCheckin("hwSet2", hwSet2Amount)}>Check In</button>
             </div>
+
+            <div style={{ marginTop: "30px" }}>
+              <button onClick={logOut}>Log Out</button>
+            </div>
+
           </div>
+          
         )}
       </div>
+
     );
   };
   

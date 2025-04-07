@@ -90,17 +90,6 @@ const ProjectSelection = () => {
       {/* Join an Existing Project */}
       {/* Project ID Input */}
       <h3>Your Projects</h3>
-      <div>
-        <label>Project ID:</label>
-          <input
-            type="text"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-          placeholder="Enter your project ID"
-          />
-        <button onClick={fetchProjects}>Join My Projects</button>
-      </div>
-
     
       {projects.length === 0 ? (
         <p>No projects found. Join or create one!</p>
@@ -114,7 +103,17 @@ const ProjectSelection = () => {
           ))}
         </ul>
       )}
+      <h3>Join Existing Projects</h3>
+      <div>
+        <input
+          type="text"
+          value={userId}
+          onChange={(e) => setUserId(e.target.value)}
+        placeholder="Enter the project ID"
+        />
+      <button onClick={fetchProjects}>Join My Projects</button>
       
+    </div>
       {/* Log Out Button */}
       <div style={{ marginTop: "20px" }}>
         <button onClick={logOut}>Log Out</button>

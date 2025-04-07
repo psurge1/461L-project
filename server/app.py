@@ -9,9 +9,7 @@ import projectsDB
 import hardwareDB
 
 # Define the MongoDB connection string
-# MONGODB_SERVER = "mongodb+srv://ericshi:AmX57b9CnFTCBX9P@users.h6xkw.mongodb.net/"
 MONGODB_SERVER2 = "mongodb+srv://ericshi:AmX57b9CnFTCBX9P@cluster0.bts3jlz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-# MONGODB_SERVER2 = "mongodb+srv://surajswamy:27TIkkustt7UO7Vl@cluster0.xg5kfks.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 # Initialize a new Flask web application
 app = Flask(__name__)
 client = MongoClient(MONGODB_SERVER2)

@@ -57,16 +57,20 @@ def checkOutHW(client, projectId, hwSetName, qty, userId) -> dict[str, any]:
     if userId not in project['users']:
         return {"status": "error", "log": "User not part of project."}
     
-    available_qty = hardwareDB.getAvailableQty(hwSetName)
-    if available_qty < qty:
-        return {"status": "error", "log": "Not enough hardware available."}
+    # available_qty = hardwareDB.getAvailableQty(hwSetName)
+    # if available_qty < qty:
+    #     return {"status": "error", "log": "Not enough hardware available."}
+    result = hardwareDB.requestSpace(client, hwSetName, qty)
     
-    hardwareDB.updateQty(hwSetName, -qty)
-    db.projects.update_one(
-        {'projectId': projectId},
-        {'$inc': {f'hwSets.{hwSetName}': qty}}
-    )
-    return {"status": "success", "log": "Hardware checked out successfully."}
+    # hardwareDB.updateQty(hwSetName, -qty)
+    if result["status"] == "success":
+        db.projects.update_one(
+            {'projectId': projectId},
+            {'$inc': {f'hwSets.{hwSetName}': qty}}
+        )
+        return {"status": "success", "log": "Hardware checked out successfully."}
+    else:
+        return {"status": "error", "log": "Hardware not checked out."}
 
 def checkInHW(client, projectId, hwSetName, qty, userId) -> dict[str, any]:
     db = __get_database(client)

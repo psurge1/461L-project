@@ -9,8 +9,9 @@ import projectsDB
 import hardwareDB
 
 # Define the MongoDB connection string
-MONGODB_SERVER = "mongodb+srv://ericshi:AmX57b9CnFTCBX9P@users.h6xkw.mongodb.net/"
-MONGODB_SERVER2 = "mongodb+srv://surajswamy:27TIkkustt7UO7Vl@cluster0.xg5kfks.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+# MONGODB_SERVER = "mongodb+srv://ericshi:AmX57b9CnFTCBX9P@users.h6xkw.mongodb.net/"
+MONGODB_SERVER2 = "mongodb+srv://ericshi:AmX57b9CnFTCBX9P@cluster0.bts3jlz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+# MONGODB_SERVER2 = "mongodb+srv://surajswamy:27TIkkustt7UO7Vl@cluster0.xg5kfks.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 # Initialize a new Flask web application
 app = Flask(__name__)
 client = MongoClient(MONGODB_SERVER2)
@@ -35,30 +36,13 @@ def login():
         return jsonify(attempt), 401
 
 
-# Route for the main page (Work in progress)
-@app.route('/main')
-def mainPage():
-    data = request.args
-
+@app.route('/test', methods=['GET'])
+def test():
     try:
         client.admin.command("ping")
-        print("Successfully connected")
     except Exception as e:
-        print(e)
-    # Extract data from request
-
-    # Connect to MongoDB
-
-    # Fetch user projects using the usersDB module
-    # projects = usersDB.getUserProjectsList()
-
-    # Close the MongoDB connection
-
-    # Return a JSON response
-    # response = jsonify({"Hello": "HI"})
-    # response.headers['Content-Type'] = 'application/json'
-    # response.headers['Accept'] = 'application/json'
-    return jsonify(data)
+        return {"status": str(e)}
+    return {"status": "success"}
 
 # Route for joining a project
 @app.route('/join_project', methods=['POST'])
@@ -113,6 +97,7 @@ def get_user_projects_list():
 
 # Route for creating a new project
 # Tested with postman
+### TODO: Check for duplicate project IDS
 @app.route('/create_project', methods=['POST', 'PUT'])
 def create_project():
     data = request.args

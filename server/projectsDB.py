@@ -1,19 +1,17 @@
 from pymongo import MongoClient
 
 import hardwareDB
+from dbs import dbs
 
-
-def __getDatabase(client):
-    return client["projectsDB"]
 
 
 def queryProject(client, projectId):
-    database = __getDatabase(client)
+    database = client[dbs.PROJECTSDB.value]
     projectCollection = database['projects']
     return projectCollection.find_one({'projectId': projectId})
 
 def createProject(client, projectName, projectId, description):
-    database = __getDatabase(client)
+    database = client[dbs.PROJECTSDB.value]
     projectCollection = database['projects']
 
     if projectCollection.find_one({'projectId': projectId}):
@@ -37,16 +35,26 @@ def createProject(client, projectName, projectId, description):
     return {"status": "success", "log": "project created"}
 
 def addUser(client, projectId, userId):
-    database = __getDatabase(client)
-    projectCollection = database['projects']
+    projectsDatabase = client[dbs.PROJECTSDB.value]
+    projectCollection = projectsDatabase['projects']
+    usersDatabase = client[dbs.USERSDB.value]
+    userCollection = usersDatabase['users']
 
+    users = userCollection.find_one({'userId' : userId})
+
+    if not users:
+        return {"status": "error", "log": "wrong user"}
+    print(projectId, userId)
     project = queryProject(client, projectId)
+    print(project)
 
     if not project:
         return {"status": "error", "log": "project not found"}
     
     if userId in project['users']:
         return {"status": "error", "log": "user already in project"}
+    
+    userCollection.update_one({'userId' : userId}, {'$push': {'projects': projectId}})
 
     projectCollection.update_one(
         {'projectId': projectId},
@@ -55,7 +63,7 @@ def addUser(client, projectId, userId):
     return {"status": "success", "log": "user added to project"}
 
 def updateUsage(client, projectId, hwSetName, qty):
-    database = __getDatabase(client)
+    database = client[dbs.PROJECTSDB.value]
     projectCollection = database['projects']
     project = queryProject(client, projectId)
 

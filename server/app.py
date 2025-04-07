@@ -1,7 +1,10 @@
 # Import necessary libraries and modules
-from bson.objectid import ObjectId
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from pymongo import MongoClient
+import certifi
+
+
 
 # Import custom modules for database interactions
 import usersDB
@@ -9,17 +12,20 @@ import projectsDB
 import hardwareDB
 
 # Define the MongoDB connection string
-MONGODB_SERVER2 = "mongodb+srv://ericshi:AmX57b9CnFTCBX9P@cluster0.bts3jlz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+MONGODB_SERVER = "mongodb+srv://ericshi:AmX57b9CnFTCBX9P@cluster0.bts3jlz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 # Initialize a new Flask web application
 app = Flask(__name__)
-client = MongoClient(MONGODB_SERVER2)
+CORS(app)  # This will allow CORS for all routes
+client = MongoClient(MONGODB_SERVER,
+    tls=True,
+    tlsCAFile=certifi.where())
 
 # Route for user login
 # Tested with postman
 @app.route('/login', methods=['POST'])
 def login():
     # Extract data from request (e.g., username and password)
-    data = request.args
+    data = request.get_json()
     userId = data.get('userId')
     password = data.get('password')
 
@@ -34,13 +40,30 @@ def login():
         return jsonify(attempt), 401
 
 
-@app.route('/test', methods=['GET'])
-def test():
+# Route for the main page (Work in progress)
+@app.route('/main')
+def mainPage():
+    data = request.args
+
     try:
         client.admin.command("ping")
+        print("Successfully connected")
     except Exception as e:
-        return {"status": str(e)}
-    return {"status": "success"}
+        print(e)
+    # Extract data from request
+
+    # Connect to MongoDB
+
+    # Fetch user projects using the usersDB module
+    # projects = usersDB.getUserProjectsList()
+
+    # Close the MongoDB connection
+
+    # Return a JSON response
+    # response = jsonify({"Hello": "HI"})
+    # response.headers['Content-Type'] = 'application/json'
+    # response.headers['Accept'] = 'application/json'
+    return jsonify(data)
 
 # Route for joining a project
 @app.route('/join_project', methods=['POST'])
@@ -58,9 +81,11 @@ def join_project():
 # Tested with postman
 @app.route('/add_user', methods=['POST'])
 def add_user():
-    data = request.args
+    data = request.get_json()
     userId = data.get('userId')
     password = data.get('password')
+
+    print(data)
 
     if not userId or not password:
         return jsonify({'status': 'error', 'message': 'Username and password are required.'}), 400
@@ -95,7 +120,6 @@ def get_user_projects_list():
 
 # Route for creating a new project
 # Tested with postman
-### TODO: Check for duplicate project IDS
 @app.route('/create_project', methods=['POST', 'PUT'])
 def create_project():
     data = request.args

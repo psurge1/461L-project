@@ -59,7 +59,7 @@ const ResourceManagement = () => {
           <div>
             <div>
               <h3>HW Set 1</h3>
-              <p>Available: {resources.hwSet1 || 0}</p>
+              <p>Available: {resources.hwSet1?.available || 0} / {resources.hwSet1?.capacity || 200}</p>
               <input
                 type="number"
                 value={hwSet1Amount}
@@ -72,7 +72,7 @@ const ResourceManagement = () => {
   
             <div style={{ marginTop: "20px" }}>
               <h3>HW Set 2</h3>
-              <p>Available: {resources.hwSet2 || 0}</p>
+              <p>Available: {resources.hwSet2?.available || 0} / {resources.hwSet2?.capacity || 200}</p>
               <input
                 type="number"
                 value={hwSet2Amount}

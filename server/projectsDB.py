@@ -121,3 +121,22 @@ def checkOutHW(client, projectId, hwSetName, qty, userId):
         return result
 
     return updateUsage(client, projectId, hwSetName, qty)
+
+
+def removeUser(client, projectId, userId):
+    if not projectId or not userId:
+        return {"status": "error", "log": "missing projectId or userId"}
+
+    projectCollection = client[dbs.PROJECTSDB.value]['projects']
+    userCollection = client[dbs.USERSDB.value]['users']
+
+    projectCollection.update_one(
+        {'projectId': projectId},
+        {'$pull': {'users': userId}}
+    )
+    userCollection.update_one(
+        {'userId': userId},
+        {'$pull': {'projects': projectId}}
+    )
+
+    return {"status": "success", "log": "user removed from project"}

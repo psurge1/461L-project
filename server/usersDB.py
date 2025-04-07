@@ -97,15 +97,22 @@ def joinProject(client, userId, projectId) -> dict[str, any]:
     return {"status": "success", "log": "added user to project"}
 
 
-# Function to get the list of projects for a user
-def getUserProjectsList(client, userId) -> dict[str, any]:
-    database = client[dbs.USERSDB.value]
-    userCollection = database['users']
+# inside usersDB.py
+def getUserProjectsList(client, userId):
+    userCollection = client[dbs.USERSDB.value]['users']
+    projectCollection = client[dbs.PROJECTSDB.value]['projects']
 
-    #find user
-    users = userCollection.find_one({'userId' : userId})
+    user = userCollection.find_one({'userId': userId})
+    if not user or 'projects' not in user:
+        return []
 
-    if users:
-        return {"status": "success", "log": "successfully retrieved projects", "projects": users['projects']}
-    else:
-        return {"status": "error", "log": "user doesn't exist"}
+    # Now fetch full project info
+    project_ids = user['projects']
+    projects = list(projectCollection.find({'projectId': {'$in': project_ids}}))
+
+    # Convert ObjectIds to strings
+    for proj in projects:
+        if '_id' in proj:
+            proj['_id'] = str(proj['_id'])
+
+    return projects

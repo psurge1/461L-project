@@ -23,6 +23,7 @@ function App() {
       .then((response) => {
         console.log(response.data);
         if (response.data["status"] === "success") {
+          localStorage.setItem("userId", userId); // ✅ store it
           setUser(userId);
           setLoggedIn(true);
         }
@@ -32,6 +33,7 @@ function App() {
         console.log(error);
       });
   };
+  
 
   // Function to handle signup form submission
   const handleSignup = async (e) => {

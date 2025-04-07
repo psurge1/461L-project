@@ -3,7 +3,7 @@ from pymongo import MongoClient
 
 import projectsDB
 
-
+from dbs import dbs
 
 
 """
@@ -26,14 +26,11 @@ User = {
 }
 '''
 
-def __getDatabase(client):
-    return client["usersDB"]
-
 # Function to add a new user
-#not encrypted yet
+# not encrypted yet
 def addUser(client, userId, password) -> dict[str, any]:
     #fix this database
-    database = __getDatabase(client)
+    database = client[dbs.USERSDB.value]
     userCollection = database['users']
 
     #check already existing logins
@@ -56,7 +53,7 @@ def addUser(client, userId, password) -> dict[str, any]:
 
 # Helper function to query a user by username and userId
 def __queryUser(client, userId):
-    database = __getDatabase(client)
+    database = client[dbs.USERSDB.value]
     userCollection = database['users']
 
     #query user
@@ -78,9 +75,10 @@ def login(client, userId, password) -> dict[str, any]:
         return {"status": "error", "log": "invalid login"}
 
 
+
 # Function to add a user to a project
 def joinProject(client, userId, projectId) -> dict[str, any]:
-    database = __getDatabase(client)
+    database = client[dbs.USERSDB.value]
     userCollection = database['users']
 
     #find user
@@ -98,9 +96,10 @@ def joinProject(client, userId, projectId) -> dict[str, any]:
 
     return {"status": "success", "log": "added user to project"}
 
+
 # Function to get the list of projects for a user
 def getUserProjectsList(client, userId) -> dict[str, any]:
-    database = __getDatabase(client)
+    database = client[dbs.USERSDB.value]
     userCollection = database['users']
 
     #find user

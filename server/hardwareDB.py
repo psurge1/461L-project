@@ -1,10 +1,10 @@
 from pymongo import MongoClient
 
-def __get_database(client):
-    return client["hardwareDB"]
+from dbs import dbs
+
 
 def createHardwareSet(client, hwSetName, initCapacity) -> dict[str, any]:
-    db = __get_database(client)
+    db = client[dbs.HARDWAREDB.value]
     collection = db["hardwareSets"]
     if collection.find_one({"hwName": hwSetName}):
         return {"status": "error", "log": "Hardware set already exists."}
@@ -17,7 +17,7 @@ def createHardwareSet(client, hwSetName, initCapacity) -> dict[str, any]:
     return {"status": "success", "log": "Hardware set created successfully."}
 
 def queryHardwareSet(client, hwSetName) -> dict[str, any]:
-    db = __get_database(client)
+    db = client[dbs.HARDWAREDB.value]
     collection = db["hardwareSets"]
     hwSet = collection.find_one({"hwName": hwSetName})
     if hwSet != None:
@@ -26,7 +26,7 @@ def queryHardwareSet(client, hwSetName) -> dict[str, any]:
         return {"status": "error", "log": "Hardware set doesn't exist"}
 
 def updateAvailability(client, hwSetName, newAvailability) -> dict[str, any]:
-    db = __get_database(client)
+    db = client[dbs.HARDWAREDB.value]
     collection = db["hardwareSets"]
     result = collection.update_one(
         {"hwName": hwSetName},
@@ -38,7 +38,7 @@ def updateAvailability(client, hwSetName, newAvailability) -> dict[str, any]:
         return {"status": "error", "log": "Hardware set not found."}
 
 def incAvailability(client, hwSetName, amount) -> dict[str, any]:
-    db = __get_database(client)
+    db = client[dbs.HARDWAREDB.value]
     collection = db["hardwareSets"]
     hw_set = collection.find_one({"hwName": hwSetName})
     if not hw_set:
@@ -53,7 +53,7 @@ def incAvailability(client, hwSetName, amount) -> dict[str, any]:
         return {"status": "error", "log": "Too much hardware."}
 
 def requestSpace(client, hwSetName, amount) -> dict[str, any]:
-    db = __get_database(client)
+    db = client[dbs.HARDWAREDB.value]
     collection = db["hardwareSets"]
     hw_set = collection.find_one({"hwName": hwSetName})
     if not hw_set:
@@ -68,7 +68,7 @@ def requestSpace(client, hwSetName, amount) -> dict[str, any]:
         return {"status": "error", "log": "Not enough available hardware."}
 
 def getAllHwNames(client) -> dict[str, any]:
-    db = __get_database(client)
+    db = client[dbs.HARDWAREDB.value]
     collection = db["hardwareSets"]
     return {
         "status": "success", 

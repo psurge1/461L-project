@@ -49,7 +49,7 @@ def join_project():
     projectId = data["projectId"]
     userId = data["userId"]
     
-    result = usersDB.addUser(client, projectId, userId)
+    result = projectsDB.addUser(client, projectId, userId)
 
     return jsonify(result)
 

@@ -6,8 +6,10 @@ export const backendServerUrl = "http://localhost:5000"
 const ProjectSelection = () => {
   const [projects, setProjects] = useState([]); // Stores user projects
   const [newProjectName, setNewProjectName] = useState(""); // Input for new project
+  const [newProjectId, setNewProjectId] = useState("");
   const [newProjectDesc, setNewProjectDesc] = useState("");
   const [userId, setUserId] = useState(""); // Input for user ID
+  
 
   // Function to fetch user's project list
   const fetchProjects = async () => {
@@ -37,6 +39,7 @@ const ProjectSelection = () => {
     try {
       await axios.post(backendServerUrl + "/create_project", {
         name: newProjectName,
+        id: newProjectId,
         description: newProjectDesc,
       });
       alert("Project created successfully!");
@@ -45,6 +48,7 @@ const ProjectSelection = () => {
       console.error("Error creating project:", error);
     }
   };
+  
 
   //TODO log out function
   //check inside functions of this
@@ -69,6 +73,12 @@ const ProjectSelection = () => {
       />
       <input
         type="text"
+        value={newProjectId}
+        onChange={(e) => setNewProjectId(e.target.value)}
+        placeholder="Project ID"
+      />
+      <input
+        type="text"
         value={newProjectDesc}
         onChange={(e) => setNewProjectDesc(e.target.value)}
         placeholder="Project Description"
@@ -88,7 +98,7 @@ const ProjectSelection = () => {
             onChange={(e) => setUserId(e.target.value)}
           placeholder="Enter your project ID"
           />
-        <button onClick={fetchProjects}>Load My Projects</button>
+        <button onClick={fetchProjects}>Join My Projects</button>
       </div>
 
     

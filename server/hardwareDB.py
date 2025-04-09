@@ -67,7 +67,11 @@ def requestSpace(client, hwSetName, amount) -> dict[str, any]:
         )
         return {"status": "success", "log": "Space allocated successfully."}
     else:
-        return {"status": "error", "log": "Not enough available hardware."}
+        collection.update_one(
+            {"hwName": hwSetName},
+            {"$set": {"availability": 0}}
+        )
+        return {"status": "semierror", "log": "Not enough available hardware.", "qty": int(hw_set["availability"])}
 
 def getAllHwNames(client) -> dict[str, any]:
     db = __get_database(client)

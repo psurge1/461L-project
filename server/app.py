@@ -174,16 +174,23 @@ def checkout():
     projectId = data["projectId"]
     userId = data["userId"]
 
+    overflow = False
     # Step 1: Reserve hardware
     result = hardwareDB.requestSpace(client, hwSetName, amount)
     if result["status"] != "success":
-        return jsonify(result), 400
+        if usage_result["status"] == "semierror":
+            amount = usage_result["qty"]
+            overflow = True
+        else:
+            return jsonify(result), 400
 
     # Step 2: Update project usage
     usage_result = projectsDB.updateUsage(client, projectId, hwSetName, amount, userId)
     if usage_result["status"] != "success":
         return jsonify(usage_result), 400
 
+    if overflow:
+        return jsonify({"status": "error", "log": "Checked out some hardware, but not all of it (ot enough available)."})
     return jsonify(usage_result)
 
 

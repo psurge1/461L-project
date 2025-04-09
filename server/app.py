@@ -178,8 +178,8 @@ def checkout():
     # Step 1: Reserve hardware
     result = hardwareDB.requestSpace(client, hwSetName, amount)
     if result["status"] != "success":
-        if usage_result["status"] == "semierror":
-            amount = usage_result["qty"]
+        if result["status"] == "semierror":
+            amount = result["qty"]
             overflow = True
         else:
             return jsonify(result), 400

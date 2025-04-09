@@ -138,9 +138,6 @@ const ProjectSelection = () => {
       <h3>Your Projects</h3>
       {joinedProjects.length > 0 ? renderProjectList(joinedProjects, "Leave", leaveProject, "#e74c3c") : <p>No projects joined yet.</p>}
 
-      <h3>Other Available Projects</h3>
-      {notJoinedProjects.length > 0 ? renderProjectList(notJoinedProjects, "Join", joinProject, "#2ecc71") : <p>No other projects found.</p>}
-
       <h3>Join a Project by ID</h3>
       <input
         type="text"

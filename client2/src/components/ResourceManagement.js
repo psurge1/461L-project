@@ -10,12 +10,14 @@ const ResourceManagement = () => {
   const [message, setMessage] = useState("");
   const [newSetName, setNewSetName] = useState("");
   const [newSetCapacity, setNewSetCapacity] = useState("");
-  const [projectId, setProjectId] = useState("");
+  const [projects, setProjects] = useState([]);
+  const [selectedProject, setSelectedProject] = useState("");
+  const [usageMap, setUsageMap] = useState({});
 
   const userId = localStorage.getItem("userId");
 
   useEffect(() => {
-    const fetchAllHardware = async () => {
+    const fetchAllData = async () => {
       try {
         const hwNamesRes = await axios.get(`${backendServerUrl}/get_all_hw_names`);
         const hwNames = hwNamesRes.data.hwnames || [];
@@ -33,16 +35,29 @@ const ResourceManagement = () => {
         }));
 
         setHardwareSets(hwData);
+
+        const projectRes = await axios.get(`${backendServerUrl}/get_user_projects_list`, {
+          params: { userId },
+        });
+
+        setProjects(projectRes.data.projects || []);
+
+        const usageRes = await axios.get(`${backendServerUrl}/get_project_info`, {
+          params: { projectId: projectRes.data.projects[0]?.projectId },
+        });
+
+        setUsageMap(usageRes.data.hardware || {});
+        setSelectedProject(projectRes.data.projects[0]?.projectId || "");
         setLoading(false);
       } catch (error) {
-        console.error("Failed to load hardware sets:", error);
-        setMessage("Failed to load hardware sets.");
+        console.error("Failed to load data:", error);
+        setMessage("Failed to load data.");
         setLoading(false);
       }
     };
 
-    fetchAllHardware();
-  }, []);
+    fetchAllData();
+  }, [userId]);
 
   const handleAmountChange = (name, value) => {
     if (value >= 0) {
@@ -51,21 +66,14 @@ const ResourceManagement = () => {
   };
 
   const handleCheckout = async (setName) => {
-    if (!projectId || !userId) {
-      alert("Please enter a project ID.");
-      return;
-    }
+    if (!selectedProject || !userId) return;
     try {
-      await axios.post(
-        `${backendServerUrl}/check_out`,
-        {
-          setNumber: setName,
-          amount: Number(amounts[setName] || 0),
-          projectId,
-          userId,
-        },
-        { headers: { "Content-Type": "application/json" } }
-      );
+      await axios.post(`${backendServerUrl}/check_out`, {
+        setNumber: setName,
+        amount: Number(amounts[setName] || 0),
+        projectId: selectedProject,
+        userId,
+      });
       setMessage(`Checked out ${amounts[setName]} from ${setName}`);
       window.location.reload();
     } catch (error) {
@@ -75,21 +83,18 @@ const ResourceManagement = () => {
   };
 
   const handleCheckin = async (setName) => {
-    if (!projectId || !userId) {
-      alert("Please enter a project ID.");
+    const currentUsage = usageMap[setName] || 0;
+    if (!selectedProject || !userId || Number(amounts[setName]) > currentUsage) {
+      alert(`Cannot check in more than you have checked out. Current usage: ${currentUsage}`);
       return;
     }
     try {
-      await axios.post(
-        `${backendServerUrl}/check_in`,
-        {
-          setNumber: setName,
-          amount: Number(amounts[setName] || 0),
-          projectId,
-          userId,
-        },
-        { headers: { "Content-Type": "application/json" } }
-      );
+      await axios.post(`${backendServerUrl}/check_in`, {
+        setNumber: setName,
+        amount: Number(amounts[setName] || 0),
+        projectId: selectedProject,
+        userId,
+      });
       setMessage(`Checked in ${amounts[setName]} to ${setName}`);
       window.location.reload();
     } catch (error) {
@@ -97,52 +102,26 @@ const ResourceManagement = () => {
       setMessage(error.response?.data?.log || "Check-in failed!");
     }
   };
-
-  const handleCreateSet = async () => {
-    try {
-      await axios.post(`${backendServerUrl}/create_hardware_set`, null, {
-        params: {
-          hwSetName: newSetName,
-          capacity: newSetCapacity,
-        },
-      });
-      setMessage(`Created ${newSetName}`);
-      window.location.reload();
-    } catch (error) {
-      console.error("Creation failed:", error);
-      setMessage("Creation failed!");
-    }
-  };
-
-  const handleDeleteSet = async (setName) => {
-    try {
-      await axios.delete(`${backendServerUrl}/remove_hardware_set`, {
-        params: { hwSetName: setName },
-      });
-      setMessage(`Deleted ${setName}`);
-      window.location.reload();
-    } catch (error) {
-      console.error("Delete failed:", error);
-      setMessage("Delete failed!");
-    }
-  };
-
   return (
-    <div style={{ maxWidth: "800px", margin: "40px auto", padding: "20px", fontFamily: "Arial, sans-serif" }}>
+    <div style={{ maxWidth: "800px", margin: "40px auto", padding: "20px" }}>
       <h2 style={{ textAlign: "center", marginBottom: "30px" }}>🔧 Resource Management</h2>
 
       {message && <p style={{ color: "green", textAlign: "center" }}>{message}</p>}
 
       <div style={{ marginBottom: "20px", textAlign: "center" }}>
         <label>
-          <strong>Project ID: </strong>
-          <input
-            type="text"
-            placeholder="Enter project ID"
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-            style={{ padding: "8px", marginLeft: "10px", width: "200px" }}
-          />
+          <strong>Select Project: </strong>
+          <select
+            value={selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value)}
+            style={{ padding: "8px", marginLeft: "10px" }}
+          >
+            {projects.map((p) => (
+              <option key={p.projectId} value={p.projectId}>
+                {p.projectId}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
 
@@ -153,17 +132,12 @@ const ResourceManagement = () => {
           {hardwareSets.map((set) => (
             <div
               key={set.name}
-              style={{
-                border: "1px solid #ccc",
-                borderRadius: "10px",
-                padding: "20px",
-                marginBottom: "20px",
-                boxShadow: "2px 2px 10px rgba(0,0,0,0.1)",
-              }}
+              style={{ border: "1px solid #ccc", borderRadius: "10px", padding: "20px", marginBottom: "20px" }}
             >
               <h3>{set.name}</h3>
               <p>
-                <strong>Availability:</strong> {set.availability} / <strong>Capacity:</strong> {set.capacity}
+                <strong>Availability:</strong> {set.availability} / <strong>Capacity:</strong> {set.capacity} <br />
+                <strong>Checked out in this project:</strong> {usageMap[set.name] || 0}
               </p>
               <input
                 type="number"
@@ -173,49 +147,15 @@ const ResourceManagement = () => {
                 placeholder="Enter amount"
                 style={{ padding: "8px", marginRight: "10px", width: "100px" }}
               />
-              <button
-                onClick={() => handleCheckout(set.name)}
-                style={{ padding: "8px 16px", marginRight: "10px" }}
-              >
+              <button onClick={() => handleCheckout(set.name)} style={{ padding: "8px 16px", marginRight: "10px" }}>
                 Check Out
               </button>
-              <button
-                onClick={() => handleCheckin(set.name)}
-                style={{ padding: "8px 16px", marginRight: "10px" }}
-              >
+              <button onClick={() => handleCheckin(set.name)} style={{ padding: "8px 16px", marginRight: "10px" }}>
                 Check In
-              </button>
-              <button
-                onClick={() => handleDeleteSet(set.name)}
-                style={{ padding: "8px 16px", backgroundColor: "#ff4d4f", color: "white" }}
-              >
-                Remove
               </button>
             </div>
           ))}
 
-          <hr style={{ margin: "40px 0" }} />
-          <h3>Create New Hardware Set</h3>
-          <div style={{ marginBottom: "20px" }}>
-            <input
-              type="text"
-              placeholder="Set Name"
-              value={newSetName}
-              onChange={(e) => setNewSetName(e.target.value)}
-              style={{ padding: "8px", marginRight: "10px" }}
-            />
-            <input
-              type="number"
-              min="0"
-              placeholder="Capacity"
-              value={newSetCapacity}
-              onChange={(e) => setNewSetCapacity(e.target.value)}
-              style={{ padding: "8px", marginRight: "10px", width: "100px" }}
-            />
-            <button onClick={handleCreateSet} style={{ padding: "8px 16px" }}>
-              Create Set
-            </button>
-          </div>
         </>
       )}
     </div>

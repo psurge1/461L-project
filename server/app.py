@@ -190,7 +190,7 @@ def checkout():
         return jsonify(usage_result), 400
 
     if overflow:
-        return jsonify({"status": "error", "log": "Checked out some hardware, but not all of it (ot enough available)."})
+        return jsonify({"status": "semierror", "log": usage_result["log"]})
     return jsonify(usage_result)
 
 

@@ -46,7 +46,7 @@ const ResourceManagement = () => {
           params: { projectId: projectRes.data.projects[0]?.projectId },
         });
 
-        setUsageMap(usageRes.data.hardware || {});
+        setUsageMap(usageRes.data.result.hardware || {});
         setSelectedProject(projectRes.data.projects[0]?.projectId || "");
         setLoading(false);
       } catch (error) {
@@ -59,6 +59,18 @@ const ResourceManagement = () => {
     fetchAllData();
   }, [userId]);
 
+  useEffect(() => {
+    if (selectedProject !== "") {
+      let value = null;
+      axios.get(`${backendServerUrl}/get_project_info`, {
+        params: { projectId: selectedProject },
+      }).then ((results) => {
+        value = results;
+        setUsageMap(value.data.result.hardware || {});
+      });
+    }
+  }, [selectedProject]);
+
   const handleAmountChange = (name, value) => {
     if (value >= 0) {
       setAmounts(prev => ({ ...prev, [name]: value }));
@@ -68,7 +80,7 @@ const ResourceManagement = () => {
   const handleCheckout = async (setName) => {
     if (!selectedProject || !userId) return;
     try {
-      await axios.post(`${backendServerUrl}/check_out`, {
+      const result = await axios.post(`${backendServerUrl}/check_out`, {
         setNumber: setName,
         amount: Number(amounts[setName] || 0),
         projectId: selectedProject,
@@ -76,6 +88,9 @@ const ResourceManagement = () => {
       });
       setMessage(`Checked out ${amounts[setName]} from ${setName}`);
       window.location.reload();
+      console.log(result.data)
+      if (result.data["status"] === "semierror")
+          alert("Cannot check out that much hardware! Checked out as much as possible.")
     } catch (error) {
       console.error("Checkout failed:", error);
       setMessage(error.response?.data?.log || "Checkout failed!");
@@ -83,7 +98,7 @@ const ResourceManagement = () => {
   };
 
   const handleCheckin = async (setName) => {
-    const currentUsage = usageMap[setName] || 0;
+    const currentUsage = usageMap[setName].total || 0;
     if (!selectedProject || !userId || Number(amounts[setName]) > currentUsage) {
       alert(`Cannot check in more than you have checked out. Current usage: ${currentUsage}`);
       return;
@@ -102,6 +117,10 @@ const ResourceManagement = () => {
       setMessage(error.response?.data?.log || "Check-in failed!");
     }
   };
+  // console.log("HWSets: ", hardwareSets);
+  // console.log("Projects: ", projects);
+  // console.log("Selected Project: ", selectedProject);
+  // console.log("UsageMap: ", usageMap);
   return (
     <div style={{ maxWidth: "800px", margin: "40px auto", padding: "20px" }}>
       <h2 style={{ textAlign: "center", marginBottom: "30px" }}>🔧 Resource Management</h2>
@@ -137,7 +156,7 @@ const ResourceManagement = () => {
               <h3>{set.name}</h3>
               <p>
                 <strong>Availability:</strong> {set.availability} / <strong>Capacity:</strong> {set.capacity} <br />
-                <strong>Checked out in this project:</strong> {usageMap[set.name] || 0}
+                <strong>Checked out in this project:</strong> {usageMap[set.name].total || 0}
               </p>
               <input
                 type="number"

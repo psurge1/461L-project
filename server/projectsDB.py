@@ -25,7 +25,6 @@ def createProject(client, projectName, projectId, description):
         return {"status": "error", "log": "Failed to retrieve hardware sets."}
         
     
-    # ✅ Correct hardware structure
     hardware_usage = {
         hwName: {
             "total": 0,
@@ -87,15 +86,16 @@ def updateUsage(client, projectId, hwSetName, qty, userId):
 
     hardware = project.get("hardware", {})
     usage = hardware.get(hwSetName, {"total": 0, "byUser": {}})
+    new_usage_qty = usage["total"] + qty
+
+    if new_usage_qty < 0:
+        return {"status": "error", "log": "You cannot check in more than you've checked out."}
+    
     usage["total"] += qty
 
     # Update individual user usage
     current_user_qty = usage["byUser"].get(userId, 0)
     new_user_qty = current_user_qty + qty
-
-    if new_user_qty < 0:
-        return {"status": "error", "log": "You cannot check in more than you've checked out."}
-
     usage["byUser"][userId] = new_user_qty
     hardware[hwSetName] = usage
 

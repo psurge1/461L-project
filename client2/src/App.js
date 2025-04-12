@@ -1,73 +1,86 @@
-import React, { useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import ProjectSelection from "./components/ProjectSelection"; // Import ProjectSelection
-import ResourceManagement from "./components/ResourceManagement"; // Import ResourceManagement
+import React, { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from "react-router-dom";
+import ProjectSelection from "./components/ProjectSelection";
+import ResourceManagement from "./components/ResourceManagement";
 import axios from "axios";
+
+
+const backendServerUrl = "";
 
 function App() {
   const [isLogin, setIsLogin] = useState(true);
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [loggedIn, setLoggedIn] = useState(false);
-  const [user, setUser] = useState(null);
+  // Check if already logged in on reload
+  useEffect(() => {
+    const storedId = localStorage.getItem("userId");
+    if (storedId) {
+      setUserId(storedId);
+      setLoggedIn(true);
+    }
+  }, []);
 
-  // Function to handle login form submission
   const handleLogin = async (e) => {
     e.preventDefault();
-    axios
-      .post("http://127.0.0.1:5000/login", { userId, password }, {
-        headers: {
-          "Content-Type": "application/json"
-        }
-      })
-      .then((response) => {
-        console.log(response.data);
-        if (response.data["status"] === "success") {
-          setUser(userId);
-          setLoggedIn(true);
-        }
-      })
-      .catch((error) => {
-        alert("Invalid Login!");
-        console.log(error);
+    try {
+      const response = await axios.post(`${backendServerUrl}/login`, { userId, password }, {
+        headers: { "Content-Type": "application/json" }
       });
+
+      if (response.data.status === "success") {
+        localStorage.setItem("userId", userId);
+        setLoggedIn(true);
+      }
+    } catch (error) {
+      alert("Invalid Login!");
+      console.log(error);
+    }
   };
 
-  // Function to handle signup form submission
   const handleSignup = async (e) => {
     e.preventDefault();
-    axios
-      .post("http://127.0.0.1:5000/add_user", { userId, password }, {
-        headers: {
-          "Content-Type": "application/json"
-        }
-      })
-      .then((response) => {
-        console.log(response.data);
-        if (response.data["status"] === "success") {
-          console.log("SUCCESS");
-          setIsLogin(true);
-        } else {
-          alert("Try a different username and/or password!");
-        }
-      })
-      .catch((error) => {
-        alert("Try a different username and/or password!");
-        console.log(error);
+    try {
+      const response = await axios.post(`${backendServerUrl}/add_user`, { userId, password }, {
+        headers: { "Content-Type": "application/json" }
       });
+
+      if (response.data.status === "success") {
+        setIsLogin(true);
+      } else {
+        alert("Try a different username and/or password!");
+      }
+    } catch (error) {
+      alert("Try a different username and/or password!");
+      console.log(error);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("userId");
+    setUserId('');
+    setPassword('');
+    setLoggedIn(false);
   };
 
   return (
     <Router>
       <div style={{ textAlign: "center", marginTop: "50px" }}>
-        <nav>
+        <nav style={{ marginBottom: "20px" }}>
           <Link to="/">Home</Link> |{" "}
           <Link to="/projects">Project Selection</Link> |{" "}
           <Link to="/resources">Resource Management</Link>
+          {loggedIn && (
+            <>
+              {" "} | <span style={{ fontWeight: "bold" }}>Welcome, {userId}!</span>
+              {" "} <button onClick={handleLogout} style={{ marginLeft: "10px" }}>
+                Log Out
+              </button>
+            </>
+          )}
         </nav>
 
         <Routes>
-          {/* Home Route (Login/Signup) */}
           <Route
             path="/"
             element={
@@ -109,24 +122,17 @@ function App() {
                     </form>
                   )}
                   <button onClick={() => setIsLogin(!isLogin)}>
-                    {isLogin
-                      ? "No account? Signup here"
-                      : "Have an account? Login here"}
+                    {isLogin ? "No account? Signup here" : "Have an account? Login here"}
                   </button>
                 </div>
               ) : (
                 <div>
-                  <h2>Welcome, {user || userId}!</h2>
                   <ProjectSelection />
                 </div>
               )
             }
           />
-
-          {/* Separate Project Selection Route */}
           <Route path="/projects" element={<ProjectSelection />} />
-
-          {/* Separate Resource Management Route */}
           <Route path="/resources" element={<ResourceManagement />} />
         </Routes>
       </div>

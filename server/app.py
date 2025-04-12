@@ -1,8 +1,9 @@
 # Import necessary libraries and modules
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from pymongo import MongoClient
 import certifi
+from dbs import dbs
 
 
 
@@ -13,26 +14,62 @@ import hardwareDB
 
 # Define the MongoDB connection string
 MONGODB_SERVER = "mongodb+srv://ericshi:AmX57b9CnFTCBX9P@cluster0.bts3jlz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-# Initialize a new Flask web application
-app = Flask(__name__)
+
+app = Flask(__name__, static_folder="build", static_url_path="")
 CORS(app)  # This will allow CORS for all routes
 client = MongoClient(MONGODB_SERVER,
     tls=True,
     tlsCAFile=certifi.where())
 
-# Route for user login
+@app.route('/')
+def serve():
+    return send_from_directory(app.static_folder, 'index.html')
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return send_from_directory(app.static_folder, 'index.html')
+
+
+def encrypt(inputText, N, D):
+    if N < 1:
+        raise ValueError("N must be >= 1.")
+    if D not in [1, -1]:
+        raise ValueError("Invalid direction.")
+    re_text = inputText[::-1]
+    encrypted_chars = []
+    for ch in re_text:
+        temp = ord(ch) - 34
+        shifted_temp = (temp + (D * N)) % 93
+        encrypted_ascii = shifted_temp + 34
+        encrypted_chars.append(chr(encrypted_ascii))
+    return "".join(encrypted_chars)
+
+def decrypt(encryptedText, N, D):
+    if N < 1:
+        raise ValueError("N must be >= 1.")
+    if D not in [1, -1]:
+        raise ValueError("Invalid direction.")
+    shifted_chars = []
+    for ch in encryptedText:
+        temp = ord(ch) - 34
+        shifted_offset = (temp - (D * N)) % 93
+        encrypted_ascii = shifted_offset + 34
+        shifted_chars.append(chr(encrypted_ascii))
+    return "".join(shifted_chars)[::-1]
+
+
 # Tested with postman
 @app.route('/login', methods=['POST'])
 def login():
-    # Extract data from request (e.g., username and password)
     data = request.get_json()
     userId = data.get('userId')
     password = data.get('password')
 
-    ## encryptedUserId = utils.encrypt(userId)
-    ## encryptedPassword = utils.encrypt(password)
-    
-    attempt = usersDB.login(client, userId, password)
+    encryptedUserId = encrypt(userId, 5, 1)
+    encryptedPassword = encrypt(password, 5, 1)
+
+    attempt = usersDB.login(client, encryptedUserId, encryptedPassword)
 
     if attempt["status"] == "success":
         return jsonify(attempt)
@@ -40,7 +77,6 @@ def login():
         return jsonify(attempt), 401
 
 
-# Route for the main page (Work in progress)
 @app.route('/main')
 def mainPage():
     data = request.args
@@ -50,76 +86,57 @@ def mainPage():
         print("Successfully connected")
     except Exception as e:
         print(e)
-    # Extract data from request
-
-    # Connect to MongoDB
-
-    # Fetch user projects using the usersDB module
-    # projects = usersDB.getUserProjectsList()
-
-    # Close the MongoDB connection
-
-    # Return a JSON response
-    # response = jsonify({"Hello": "HI"})
-    # response.headers['Content-Type'] = 'application/json'
-    # response.headers['Accept'] = 'application/json'
     return jsonify(data)
 
-# Route for joining a project
+
 @app.route('/join_project', methods=['POST'])
 def join_project():
     data = request.args
-    projectId = data["projectId"]
-    userId = data["userId"]
-    
-    result = projectsDB.addUser(client, projectId, userId)
+    projectId = data.get("projectId")
+    userId = data.get("userId")
 
+    if not userId or not projectId:
+        return jsonify({"status": "error", "message": "Missing userId or projectId"}), 400
+
+    encryptedUserId = encrypt(userId, 5, 1)
+
+    result = projectsDB.addUser(client, projectId, encryptedUserId)
     return jsonify(result)
 
 
-# Route for adding a new user (Signup)
-# Tested with postman
 @app.route('/add_user', methods=['POST'])
 def add_user():
     data = request.get_json()
     userId = data.get('userId')
     password = data.get('password')
 
-    # print(data)
-
     if not userId or not password:
         return jsonify({'status': 'error', 'message': 'Username and password are required.'}), 400
-    
-    result = usersDB.addUser(client, userId, password)
-    
+
+    encryptedUserId = encrypt(userId, 5, 1)
+    encryptedPassword = encrypt(password, 5, 1)
+
+    result = usersDB.addUser(client, encryptedUserId, encryptedPassword)
+
     if result:
         return jsonify({'status': 'success', 'message': 'User added successfully.'})
     else:
         return jsonify({'status': 'error', 'message': 'Signup failed. User may already exist.'}), 400
 
-# Route for getting the list of user projects
-# Tested with postman
 @app.route('/get_user_projects_list', methods=['GET'])
 def get_user_projects_list():
     data = request.args
     userId = data.get('userId')
-    
-    result = usersDB.getUserProjectsList(client, userId)
-    
-    return jsonify(result)
-    # if result != None:
-    #     return jsonify({
-    #         'status' : 'success',
-    #         'result' : result
-    #         })
-    # else:
-    #     return jsonify({
-    #         'status': 'error',
-    #         'message': 'Getting user projects failed. User may not exist.'
-    #         })
 
-# Route for creating a new project
-# Tested with postman
+    if not userId:
+        return jsonify({"status": "error", "message": "Missing userId"}), 400
+
+    encryptedUserId = encrypt(userId, 5, 1)
+
+    result = usersDB.getUserProjectsList(client, encryptedUserId)
+    return jsonify({"projects": result})
+
+
 @app.route('/create_project', methods=['POST', 'PUT'])
 def create_project():
     data = request.args
@@ -128,18 +145,37 @@ def create_project():
     projectId = data.get('projectId')
     description = data.get('description')
 
-    ## creating a project even if the user doesn't exist
+    if not userId or not projectId:
+        return jsonify({"status": "error", "message": "Missing userId or projectId"}), 400
+
+    encryptedUserId = encrypt(userId, 5, 1)
+
     rOne = projectsDB.createProject(client, projectName, projectId, description)
     if rOne["status"] == "error":
         return jsonify(rOne), 400
-    rTwo = projectsDB.addUser(client, projectId, userId)
+
+    rTwo = projectsDB.addUser(client, projectId, encryptedUserId)
     if rTwo["status"] == "error":
         return jsonify(rTwo), 400
 
     return jsonify({"status": "success", "log": "project created", "projectId": projectId})
 
-# Route for getting project information
-# Tested with postman
+
+@app.route('/leave_project', methods=['POST'])
+def leave_project():
+    data = request.args
+    projectId = data.get("projectId")
+    userId = data.get("userId")
+
+    if not userId or not projectId:
+        return jsonify({"status": "error", "message": "Missing userId or projectId"}), 400
+
+    encryptedUserId = encrypt(userId, 5, 1)
+
+    result = projectsDB.removeUser(client, projectId, encryptedUserId)
+    return jsonify(result)
+
+
 @app.route('/get_project_info', methods=['GET'])
 def get_project_info():
     data = request.args
@@ -151,60 +187,65 @@ def get_project_info():
 
     return jsonify({"status": "success", "result": result})
 
-# Route for getting all hardware names
 @app.route('/get_all_hw_names', methods=['GET'])
 def get_all_hw_names():
     return jsonify(hardwareDB.getAllHwNames(client))
 
-    # return jsonify({})
 
-# Route for getting hardware information
 @app.route('/get_hw_info', methods=['GET'])
 def get_hw_info():
     data = request.args
     hw_set_name = data.get('hwSetName')
     return jsonify(hardwareDB.queryHardwareSet(client, hw_set_name))
-    # return jsonify({})
 
-# Route for checking out hardware
-@app.route('/check_out', methods=['PUT'])
-def check_out():
-    data = request.args
-    hwSetName = data["hwSetName"]
-    amount = data["amount"]
+
+@app.route('/check_out', methods=['POST'])
+def checkout():
+    data = request.get_json()
+    hwSetName = data["setNumber"]
+    amount = int(data["amount"])
+    projectId = data["projectId"]
+    userId = data["userId"]
+    encryptedUserId = encrypt(userId, 5, 1)
+
+    overflow = False
+    # Step 1: Reserve hardware
+    result = hardwareDB.requestSpace(client, hwSetName, amount)
+    if result["status"] != "success":
+        if result["status"] == "semierror":
+            amount = result["qty"]
+            overflow = True
+        else:
+            return jsonify(result), 400
+
+    # Step 2: Update project usage
+    usage_result = projectsDB.updateUsage(client, projectId, hwSetName, amount, encryptedUserId)
+    if usage_result["status"] != "success":
+        return jsonify(usage_result), 400
+
+    if overflow:
+        return jsonify({"status": "semierror", "log": usage_result["log"]})
+    return jsonify(usage_result)
+
+
+@app.route('/check_in', methods=['POST'])
+def checkin():
+    data = request.get_json()
+    hwSetName = data["setNumber"]
+    amount = int(data["amount"])
     projectId = data["projectId"]
     userId = data["userId"]
 
-    projCheckinResult = projectsDB.checkInHW(client, projectId, hwSetName, amount, userId)
-    return jsonify(projCheckinResult)
+    encryptedUserId = encrypt(userId, 5, 1)
 
-# Route for checking in hardware
-@app.route('/check_in', methods=['PUT'])
-def check_in():
-    data = request.args
-    hwSetName = data["hwSetName"]
-    amount = data["amount"]
-    projectId = data["projectId"]
-    userId = data["userId"]
-
-    projCheckoutResult = projectsDB.checkOutHW(client, projectId, hwSetName, amount, userId)
-    return jsonify(projCheckoutResult)
-
-# Route for creating a new hardware set
-# Tested with postman
-@app.route('/create_hardware_set', methods=['POST'])
-def create_hardware_set():
-    # Extract data from request
-    data = request.args
-    hwSetName = data["hwSetName"]
-    initCapacity = data["capacity"]
+    result = projectsDB.updateUsage(client, projectId, hwSetName, -amount, encryptedUserId)
+    if result["status"] != "success":
+        return jsonify(result), 400
+    
+    result2 = hardwareDB.incAvailability(client, hwSetName, amount)
+    return jsonify(result2)
 
 
-    # Attempt to create the hardware set using the hardwareDB module
-    result = hardwareDB.createHardwareSet(client, hwSetName, initCapacity)
-
-    # Return a JSON response
-    return jsonify(result)
 
 # Route for checking the inventory of projects
 @app.route('/api/inventory', methods=['GET']) # What is this used for?

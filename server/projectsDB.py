@@ -23,8 +23,14 @@ def createProject(client, projectName, projectId, description):
     hw_query = hardwareDB.getAllHwNames(client)
     if hw_query["status"] != "success":
         return {"status": "error", "log": "Failed to retrieve hardware sets."}
+        
     
-    hardware_usage = {hwName: 0 for hwName in hw_query["hwnames"]}
+    hardware_usage = {
+        hwName: {
+            "total": 0,
+            "byUser": {}
+        } for hwName in hw_query["hwnames"]
+    }
 
     newProject = {
         'projectId': projectId,
@@ -36,6 +42,8 @@ def createProject(client, projectName, projectId, description):
 
     projectCollection.insert_one(newProject)
     return {"status": "success", "log": "project created"}
+
+
 
 def addUser(client, projectId, userId):
     if projectId == "" or userId == "":
@@ -68,30 +76,41 @@ def addUser(client, projectId, userId):
     )
     return {"status": "success", "log": "user added to project"}
 
-def updateUsage(client, projectId, hwSetName, qty):
-    database = client[dbs.PROJECTSDB.value]
-    projectCollection = database['projects']
-    project = queryProject(client, projectId)
-
+def updateUsage(client, projectId, hwSetName, qty, userId):
+    db = client[dbs.PROJECTSDB.value]
+    projectCollection = db["projects"]
+    project = projectCollection.find_one({"projectId": projectId})
+    
     if not project:
-        return {"status": "error", "log": "project not found"}
+        return {"status": "error", "log": "Project not found"}
 
-    current = project['hardware'].get(hwSetName, 0)
-    new_val = current + qty
+    hardware = project.get("hardware", {})
+    usage = hardware.get(hwSetName, {"total": 0, "byUser": {}})
+    new_usage_qty = usage["total"] + qty
 
+    if new_usage_qty < 0:
+        return {"status": "error", "log": "You cannot check in more than you've checked out."}
+    
+    usage["total"] += qty
+
+    # Update individual user usage
+    current_user_qty = usage["byUser"].get(userId, 0)
+    new_user_qty = current_user_qty + qty
+    usage["byUser"][userId] = new_user_qty
+    hardware[hwSetName] = usage
+
+    # Save updates
     projectCollection.update_one(
-        {'projectId': projectId},
-        {'$set': {f'hardware.{hwSetName}': new_val}}
+        {"projectId": projectId},
+        {"$set": {f"hardware": hardware}}
     )
 
-    action = "checked out" if qty > 0 else "checked in"
-    log_message = f"{action} {abs(qty)} units of {hwSetName}"
-    
     return {
         "status": "success",
-        "log": log_message,
-        "newUsage": new_val
+        "log": f"{'Checked out' if qty > 0 else 'Checked in'} {abs(qty)} units of {hwSetName}",
+        "userUsage": new_user_qty
     }
+
 
 def checkOutHW(client, projectId, hwSetName, qty, userId):
     project = queryProject(client, projectId)
@@ -102,37 +121,28 @@ def checkOutHW(client, projectId, hwSetName, qty, userId):
         return {"status": "error", "log": "User not in project."}
 
     result = hardwareDB.requestSpace(client, hwSetName, qty)
+    if result["status"] != "success":
+        if result["log"] == "Not enough available hardware.":
+            updateUsage(client, projectId, hwSetName, int(result["qty"]))
+        return result
 
-    checked_out = result["checked_out"]
-
-    return updateUsage(client, projectId, hwSetName, checked_out)
 
 
-def checkInHW(client, projectId, hwSetName, qty, userId):
-    project = queryProject(client, projectId)
-    if not project:
-        return {"status": "error", "log": "Project not found."}
+def removeUser(client, projectId, userId):
+    if not projectId or not userId:
+        return {"status": "error", "log": "missing projectId or userId"}
 
-    if userId not in project['users']:
-        return {"status": "error", "log": "User not in project."}
+    projectCollection = client[dbs.PROJECTSDB.value]['projects']
+    userCollection = client[dbs.USERSDB.value]['users']
 
-    current_qty = project['hardware'].get(hwSetName, 0)
+    projectCollection.update_one(
+        {'projectId': projectId},
+        {'$pull': {'users': userId}}
+    )
+    userCollection.update_one(
+        {'userId': userId},
+        {'$pull': {'projects': projectId}}
+    )
 
-    if qty > current_qty:
-        return {
-            "status": "error",
-            "log": f"Cannot check in {qty} units of {hwSetName}. Only {current_qty} currently checked out."
-        }
-
-    hw_set = hardwareDB.queryHardwareSet(client, hwSetName)
-    if not hw_set:
-        return {"status": "error", "log": f"Hardware set {hwSetName} not found."}
-
-    new_availability = hw_set['availability'] + qty
-    result = hardwareDB.updateAvailability(client, hwSetName, new_availability)
-
-    if result != 1:
-        return {"status": "error", "log": "Failed to update hardware availability."}
-
-    return updateUsage(client, projectId, hwSetName, -qty)
+    return {"status": "success", "log": "user removed from project"}
 

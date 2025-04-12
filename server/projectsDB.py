@@ -126,22 +126,6 @@ def checkOutHW(client, projectId, hwSetName, qty, userId):
             updateUsage(client, projectId, hwSetName, int(result["qty"]))
         return result
 
-    return updateUsage(client, projectId, hwSetName, qty)
-
-
-# def checkOutHW(client, projectId, hwSetName, qty, userId):
-#     project = queryProject(client, projectId)
-#     if not project:
-#         return {"status": "error", "log": "Project not found."}
-
-#     if userId not in project['users']:
-#         return {"status": "error", "log": "User not in project."}
-
-#     result = hardwareDB.requestSpace(client, hwSetName, qty)
-#     if result["status"] != "success":
-#         return result
-
-#     return updateUsage(client, projectId, hwSetName, qty)
 
 
 def removeUser(client, projectId, userId):
@@ -161,3 +145,4 @@ def removeUser(client, projectId, userId):
     )
 
     return {"status": "success", "log": "user removed from project"}
+

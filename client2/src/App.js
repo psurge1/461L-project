@@ -4,12 +4,14 @@ import ProjectSelection from "./components/ProjectSelection";
 import ResourceManagement from "./components/ResourceManagement";
 import axios from "axios";
 
+
+const backendServerUrl = "";
+
 function App() {
   const [isLogin, setIsLogin] = useState(true);
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [loggedIn, setLoggedIn] = useState(false);
-
   // Check if already logged in on reload
   useEffect(() => {
     const storedId = localStorage.getItem("userId");
@@ -22,7 +24,7 @@ function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://127.0.0.1:5000/login", { userId, password }, {
+      const response = await axios.post(`${backendServerUrl}/login`, { userId, password }, {
         headers: { "Content-Type": "application/json" }
       });
 
@@ -39,7 +41,7 @@ function App() {
   const handleSignup = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://127.0.0.1:5000/add_user", { userId, password }, {
+      const response = await axios.post(`${backendServerUrl}/add_user`, { userId, password }, {
         headers: { "Content-Type": "application/json" }
       });
 

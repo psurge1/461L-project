@@ -33,9 +33,6 @@ def addUser(client, userId, password) -> dict[str, any]:
     database = client[dbs.USERSDB.value]
     userCollection = database['users']
 
-    #check already existing logins
-    # if userCollection.find_one({'username': username}):
-    #     return {"status": "error", "log": "already existing username"}
     if userCollection.find_one({'userId': userId}):
         return {"status": "error", "log": "already existing userId"}
 

@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const backendServerUrl = "http://127.0.0.1:5000";
+const backendServerUrl = "";
 
 const ResourceManagement = () => {
   const [hardwareSets, setHardwareSets] = useState([]);
   const [amounts, setAmounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-  const [newSetName, setNewSetName] = useState("");
-  const [newSetCapacity, setNewSetCapacity] = useState("");
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState("");
   const [usageMap, setUsageMap] = useState({});
@@ -27,7 +25,6 @@ const ResourceManagement = () => {
             params: { hwSetName: name },
           })
         );
-
         const hwInfoResponses = await Promise.all(hwInfoRequests);
         const hwData = hwNames.map((name, idx) => ({
           name,
@@ -51,9 +48,13 @@ const ResourceManagement = () => {
         setLoading(false);
       } catch (error) {
         console.error("Failed to load data:", error);
-        setMessage("Failed to load data.");
+        if (!userId) {
+          setMessage("Please log in to view resources.");
+        } else {
+          setMessage("Failed to load data.");
+        }
         setLoading(false);
-      }
+      }      
     };
 
     fetchAllData();
@@ -156,7 +157,8 @@ const ResourceManagement = () => {
               <h3>{set.name}</h3>
               <p>
                 <strong>Availability:</strong> {set.availability} / <strong>Capacity:</strong> {set.capacity} <br />
-                <strong>Checked out in this project:</strong> {usageMap[set.name].total || 0}
+                <strong>Checked out in this project:</strong> {usageMap[set.name]?.total || 0}
+
               </p>
               <input
                 type="number"

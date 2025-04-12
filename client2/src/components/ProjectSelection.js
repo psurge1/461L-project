@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-export const backendServerUrl = "http://127.0.0.1:5000";
+export const backendServerUrl = "";
 
 const ProjectSelection = () => {
-  const [allProjects, setAllProjects] = useState([]);
+  const [joinedProjects, setJoinedProjects] = useState([]);
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectId, setNewProjectId] = useState("");
   const [newProjectDesc, setNewProjectDesc] = useState("");
@@ -12,14 +12,18 @@ const ProjectSelection = () => {
 
   const userId = localStorage.getItem("userId");
 
-  const fetchAllProjects = async () => {
+  const fetchJoinedProjects = async () => {
     try {
-      const response = await axios.get(backendServerUrl + "/get_all_projects");
-      setAllProjects(response.data.projects || []);
+      const response = await axios.get(backendServerUrl + "/get_user_projects_list", {
+        params: { userId },
+      });
+      return response.data.projects || [];
     } catch (error) {
-      console.error("Error fetching all projects:", error);
+      console.error("Error fetching joined projects:", error);
+      return [];
     }
   };
+  
 
   const joinProject = async (projectId) => {
     if (!projectId) {
@@ -32,7 +36,10 @@ const ProjectSelection = () => {
       });
       alert("Joined project successfully!");
       setManualProjectId("");
-      fetchAllProjects();
+      
+      fetchJoinedProjects().then((joined) => {
+        setJoinedProjects(joined);
+      });
     } catch (error) {
       alert("Failed to join project.");
     }
@@ -44,7 +51,10 @@ const ProjectSelection = () => {
         params: { userId, projectId },
       });
       alert("Left project successfully!");
-      fetchAllProjects();
+      
+      fetchJoinedProjects().then((joined) => {
+        setJoinedProjects(joined);
+      });
     } catch (error) {
       alert("Failed to leave project.");
     }
@@ -66,7 +76,10 @@ const ProjectSelection = () => {
         },
       });
       alert("Project created successfully!");
-      fetchAllProjects();
+      
+      fetchJoinedProjects().then((joined) => {
+        setJoinedProjects(joined);
+      });
     } catch (error) {
       if (error.response && error.response.data?.log === "project already exists") {
         alert(`Project ID "${newProjectId}" already exists. Please choose a different one.`);
@@ -79,30 +92,25 @@ const ProjectSelection = () => {
   
   const logOut = () => {
     localStorage.removeItem("userId");
-    setAllProjects([]);
     alert("Logged out successfully!");
     window.location.reload();
   };
 
   useEffect(() => {
     if (userId) {
-      fetchAllProjects();
+      fetchJoinedProjects().then((joined) => {
+        setJoinedProjects(joined);
+      });
     }
   }, [userId]);
-
-  const joinedProjects = allProjects.filter(p => p.users?.includes(userId));
-  const notJoinedProjects = allProjects.filter(p => !p.users?.includes(userId));
 
   const renderProjectList = (projects, actionLabel, actionFn, actionColor) => (
     <ul style={{ listStyleType: "none", padding: 0 }}>
       {projects.map((project, index) => (
         <li key={index} style={{
           border: "1px solid #ccc",
-          borderRadius: "12px",
           padding: "16px",
           marginBottom: "12px",
-          background: "#f9f9f9",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
         }}>
           <h4>{project.projectName}</h4>
           <p style={{ fontStyle: "italic", color: "#555" }}>
@@ -114,7 +122,6 @@ const ProjectSelection = () => {
               backgroundColor: actionColor,
               color: "#fff",
               border: "none",
-              padding: "8px 12px",
               borderRadius: "6px"
             }}
           >
@@ -128,12 +135,6 @@ const ProjectSelection = () => {
   return (
     <div style={{ padding: "20px", maxWidth: "700px", margin: "auto" }}>
       <h2>Project Selection</h2>
-
-      <h3>Create a New Project</h3>
-      <input type="text" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="Project Name" />
-      <input type="text" value={newProjectId} onChange={e => setNewProjectId(e.target.value)} placeholder="Project ID" />
-      <input type="text" value={newProjectDesc} onChange={e => setNewProjectDesc(e.target.value)} placeholder="Description" />
-      <button onClick={createProject} style={{ marginBottom: "20px" }}>Create Project</button>
 
       <h3>Your Projects</h3>
       {joinedProjects.length > 0 ? renderProjectList(joinedProjects, "Leave", leaveProject, "#e74c3c") : <p>No projects joined yet.</p>}
@@ -153,9 +154,18 @@ const ProjectSelection = () => {
         Join Project
       </button>
 
-      <div style={{ marginTop: "30px" }}>
-        <button onClick={logOut}>Log Out</button>
-      </div>
+      <h3>Create a New Project</h3>
+      <input type="text" value={newProjectName} onChange={e => setNewProjectName(e.target.value)} placeholder="Project Name" />
+      <input type="text" value={newProjectId} onChange={e => setNewProjectId(e.target.value)} placeholder="Project ID" />
+      <input type="text" value={newProjectDesc} onChange={e => setNewProjectDesc(e.target.value)} placeholder="Description" />
+      <button onClick={createProject} style={{ marginBottom: "20px" }}>Create Project</button>
+
+
+      {userId && (
+        <div style={{ marginTop: "30px" }}>
+          <button onClick={logOut}>Log Out</button>
+        </div>
+      )}
     </div>
   );
 };
